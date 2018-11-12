@@ -1,2 +1,2 @@
 # SOC429
-SOC 429: Demography Final Project - Global Fertility Forecasting with Deep Learning
+SOC 429: Demography Final Project - Fertility Forecasting Using Data Mining Methods
