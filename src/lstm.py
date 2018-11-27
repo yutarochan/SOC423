@@ -1,5 +1,6 @@
 '''
 SOC 423 - Birth Rate Prediction Model [LSTM]
+Source: https://github.com/pytorch/examples/blob/master/time_sequence_prediction/train.py
 Author: Yuya Ong
 '''
 from __future__ import print_function
