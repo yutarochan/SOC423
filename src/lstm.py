@@ -4,12 +4,21 @@ Source: https://github.com/pytorch/examples/blob/master/time_sequence_prediction
 Author: Yuya Ong
 '''
 from __future__ import print_function
+import random
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+# Application Parameters
+SEED = 9892
+
+# Initialize Seed Values
+np.random.seed(SEED)
+torch.manual_seed(SEED)
 
 class Model(nn.Module):
     def __init__(self, hid_size = 51):
@@ -49,3 +58,15 @@ class Model(nn.Module):
         outputs = torch.stack(outputs, 1).squeeze(2)
 
         return outputs
+
+if __name__ == '__main__':
+    # Load Dataset
+    birth_rate = pd.read_csv('../data/raw/birth_rate.csv', index_col=1)
+    birth_rate = birth_rate.drop(['Country Name', 'Indicator Name', 'Indicator Code', '2017', 'Unnamed: 62'], axis=1)
+    birth_rate = birth_rate.dropna().T
+
+    # Train/Test Split
+    country_list = list(birth_rate)
+    random.shuffle(country_list)
+    train_set = country_list[:int(len(country_list)*0.75)]
+    test_set = country_list[int(len(country_list)*0.75):]
