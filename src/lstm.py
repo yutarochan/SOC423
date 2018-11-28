@@ -15,6 +15,7 @@ import torch.optim as optim
 
 # Application Parameters
 SEED = 9892
+PROJ = 20
 
 # Initialize Seed Values
 np.random.seed(SEED)
@@ -65,8 +66,17 @@ if __name__ == '__main__':
     birth_rate = birth_rate.drop(['Country Name', 'Indicator Name', 'Indicator Code', '2017', 'Unnamed: 62'], axis=1)
     birth_rate = birth_rate.dropna().T
 
-    # Train/Test Split
+    # Country Train/Test Split
     country_list = list(birth_rate)
     random.shuffle(country_list)
     train_set = country_list[:int(len(country_list)*0.75)]
     test_set = country_list[int(len(country_list)*0.75):]
+
+    # Temporal Data Split
+    train_X = birth_rate[train_set].values[:-PROJ, :]
+    train_Y = birth_rate[train_set].values[train_X.shape[0]:, :]
+    test_X = birth_rate[test_set].values[:-PROJ, :]
+    test_Y = birth_rate[test_set].values[test_X.shape[0]:, :]
+
+    # Model Prediction
+    
