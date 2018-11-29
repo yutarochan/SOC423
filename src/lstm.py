@@ -4,6 +4,7 @@ Source: https://github.com/pytorch/examples/blob/master/time_sequence_prediction
 Author: Yuya Ong
 '''
 from __future__ import print_function
+import sys
 import random
 import numpy as np
 import pandas as pd
@@ -15,7 +16,9 @@ import torch.optim as optim
 
 # Application Parameters
 SEED = 9892
-PROJ = 20
+PROJ = 1
+PROJ_TEST = 20
+EPOCH = 15
 
 # Initialize Seed Values
 np.random.seed(SEED)
@@ -42,14 +45,12 @@ class Model(nn.Module):
         h_t2 = torch.zeros(input.size(0), self.hid_size, dtype=torch.double)
         c_t2 = torch.zeros(input.size(0), self.hid_size, dtype=torch.double)
 
-        # Iterate through Data
-        for i, input_t, in enumerate(input.chunk(input_size(1), dim=1)):
+        for i, input_t in enumerate(input.chunk(input.shape[1], dim=1)):
             h_t, c_t = self.lstm_1(input_t, (h_t, c_t))
             h_t2, c_t2 = self.lstm_2(h_t, (h_t2, c_t2))
             output = self.linear(h_t2)
             outputs += [output]
 
-        # Generate Predictions
         for i in range(future):
             h_t, c_t = self.lstm_1(output, (h_t, c_t))
             h_t2, c_t2 = self.lstm_2(h_t, (h_t2, c_t2))
@@ -57,8 +58,7 @@ class Model(nn.Module):
             outputs += [output]
 
         outputs = torch.stack(outputs, 1).squeeze(2)
-
-        return outputs
+        return outputs[:, -1].unsqueeze(0)
 
 if __name__ == '__main__':
     # Load Dataset
@@ -73,10 +73,41 @@ if __name__ == '__main__':
     test_set = country_list[int(len(country_list)*0.75):]
 
     # Temporal Data Split
-    train_X = birth_rate[train_set].values[:-PROJ, :]
-    train_Y = birth_rate[train_set].values[train_X.shape[0]:, :]
-    test_X = birth_rate[test_set].values[:-PROJ, :]
-    test_Y = birth_rate[test_set].values[test_X.shape[0]:, :]
+    train_X = torch.from_numpy(birth_rate[train_set].values[:-PROJ, :]).transpose(1, 0)
+    train_Y = torch.from_numpy(birth_rate[train_set].values[train_X.shape[1]-PROJ+1:, :]).transpose(1, 0)
+    test_X = torch.from_numpy(birth_rate[test_set].values[:-PROJ_TEST, :]).transpose(1, 0)
+    test_Y = torch.from_numpy(birth_rate[test_set].values[test_X.shape[1]-PROJ_TEST+1:, :]).transpose(1, 0)
 
-    # Model Prediction
-    
+    # Setup Model
+    model = Model()
+    model.double()
+
+    criterion = nn.MSELoss()
+    optimizer = optim.LBFGS(model.parameters(), lr=0.8)
+
+    # Model Training Process
+    for i in range(EPOCH):
+        print('EPOCH: ' + str(i))
+
+        def closure():
+            optimizer.zero_grad()
+            loss_total = 0
+            for idx in range(train_X.shape[0]):
+                out = model(train_X[idx].unsqueeze(0))
+                loss = criterion(out, train_Y[idx].unsqueeze(0))
+                loss_total += loss.item()
+                loss.backward()
+            print('> LOSS: ' + str(loss_total))
+            return loss_total
+
+        optimizer.step(closure)
+
+    '''
+    # Model Testing
+    with torch.no_grad():
+        loss_total = 0
+        pred = seq(, future=PROJ_TEST)
+        loss = criterion(pred[:, :-future], test_target)
+        print('test loss:', loss.item())
+        y = pred.detach().numpy()
+    '''
